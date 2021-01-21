@@ -1,0 +1,49 @@
+////////////////////////////////////////////////////////////////////////////////
+/*																			////
+*	DECLARACAO DE FUNCAO COM LOOP EM PORTUGOL (ANALIZADOR E COMPILADOR).	////
+*	BY: ANDREW NETO															////
+*	19/06/2014																////
+*/																			////
+////////////////////////////////////////////////////////////////////////////////
+package com.analizador.separadorLoop;
+
+import java_cup.runtime.*;
+
+parser code
+{:
+    public static void main(String args[]) throws Exception{
+        new parser(new Yylex(System.in)).parse();
+    }
+    public void syntax_error(Symbol s){
+        report_error("Erro de syntax: Linha "+(s.left+1)+" Coluna "+(s.right)+". Trecho desconhecido: \""+s.value+"\"",null);
+    }
+:}
+
+
+terminal ESCREVA;
+terminal SEPARADOR,ABRIR_PARENTESE,FECHAR_PARENTESE, OPERADOR;
+terminal String ID,STRING,NUMERO;
+
+
+
+non terminal gramatica,instanciacao;
+non terminal String instanciacao_loop,valor;
+
+precedence left SEPARADOR,OPERADOR;
+precedence left ABRIR_PARENTESE,FECHAR_PARENTESE;
+
+
+gramatica ::= gramatica instanciacao | instanciacao | error {::};
+
+
+instanciacao ::= ESCREVA ABRIR_PARENTESE instanciacao_loop:e FECHAR_PARENTESE {: System.out.println("System.out.print("+e+");"); :};
+
+instanciacao_loop ::= instanciacao_loop:e1 SEPARADOR instanciacao_loop:e2 {: RESULT = e1 + " + " + e2; :} |
+					  valor:e {: RESULT = e; :} |
+					  STRING:e {: RESULT = "\""+e+"\""; :};
+
+
+valor           ::= valor:e1 OPERADOR:op valor:e2                     {: RESULT = (String) e1+" "+op+" "+e2; :}   | 
+                    ABRIR_PARENTESE valor:e FECHAR_PARENTESE          {: RESULT = "("+e+")"; :}                   | 
+                    NUMERO:n                                          {: RESULT = n; :}                           |
+                    ID:n                                              {: RESULT = n; :}                           ;

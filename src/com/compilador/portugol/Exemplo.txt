@@ -1,0 +1,71 @@
+algoritmo "Algoritmo - Olá mundo"
+
+var s : string
+    c : caracter
+
+inicio
+    c <- 'c'
+fimalgoritmo
+
+
+
+
+
+/*
+algoritmo 'teste'
+
+var
+    numero,controle,tmp_espacos,i,n : inteiro
+    retorno : vetor[1..100] de caracter
+inicio
+    escreva("Digite um numero: ")
+    leia(numero)
+
+    controle <- numero
+    tmp_espacos <- numero
+
+    para i de 0 ate (numero-1) faca
+        retorno[i] <- ""
+        para n de 0 ate (controle-1) faca
+            se(tmp_espacos > 1)entao
+                retorno[i] <- retorno[i] + " "
+                tmp_espacos <- tmp_espacos - 1
+            senao
+                retorno[i] <- retorno[i] + "0"
+            fimse
+        fimpara
+        controle <- controle + 1
+        tmp_espacos <- numero - (i+1)
+        escreval(retorno[i])
+    fimpara
+
+fimalgoritmo
+
+algoritmo "teste"
+
+var nome : caracter
+
+inicio
+    escreva("Digite seu nomes: ")
+    leia(nome)
+    escreva("Seu nome e ",nome)
+fimalgoritmo
+
+
+
+
+algoritmo "Algoritmo - Olá mundo"
+
+var
+    nLoop : inteiro
+    nome : vetor[1..10] de caracter
+
+inicio
+    nLoop <- 1
+    enquanto nLoop <= 10 faca
+        leia(nome[nLoop])
+        nLoop <- nLoop + 1
+    fimenquanto
+fimalgoritmo
+
+*/

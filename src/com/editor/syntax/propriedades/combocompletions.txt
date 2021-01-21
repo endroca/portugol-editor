@@ -1,0 +1,14 @@
+algoritmo
+var
+caracter
+inteiro
+real
+vetor
+logico
+inicio
+escreva
+escreval
+enquanto(condicional) faca\n\t//  \nfimenquanto
+se(condicional) entao\n\t//  \nfimse
+para variavel de indice1 ate indice2 faca\n\t//  \nfimpara
+fimalgoritmo

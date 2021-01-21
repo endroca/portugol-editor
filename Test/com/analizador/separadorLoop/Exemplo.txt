@@ -1,0 +1,1 @@
+escreva("massa menor: ",(massa_menor/100)*5,"\n","massa maior",massa_maior)

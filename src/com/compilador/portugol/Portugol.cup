@@ -1,0 +1,648 @@
+////////////////////////////////////////////////////////////////////////
+/*                                                                  ////
+* ANALIZADOR DE PORTUGOL (GRAMATICA).							    ////
+* BY: ANDREW NETO                                                   ////
+* 05/07/2014                                                        ////
+*/                                                                  ////
+////////////////////////////////////////////////////////////////////////
+
+package com.compilador.portugol;
+
+/*import static com.analizador.portugol.parser.error;*/
+import java_cup.runtime.*;
+import javax.swing.JOptionPane;
+
+
+parser code
+{:
+
+	static Compilador util = new Compilador();
+
+    public void syntax_error(Symbol s){
+    	if(s.value != null){
+	        report_error("Erro de syntax: Linha "+(s.left+1)+" Coluna "+(s.right+1)+". Trecho desconhecido: "+s.value,null);
+	        JOptionPane.showMessageDialog(null,"Erro de syntax: Linha "+(s.left+1)+" Coluna "+(s.right+1)+". Trecho desconhecido: "+s.value,"Erro de syntax",JOptionPane.WARNING_MESSAGE);
+	    }else{
+	        report_error("Erro de syntax: Linha "+(s.left+1)+" Coluna "+(s.right+1),null);
+	        JOptionPane.showMessageDialog(null,"Erro de syntax: Linha "+(s.left+1)+" Coluna "+(s.right+1),"Erro de syntax",JOptionPane.WARNING_MESSAGE);
+	    }
+        util.setErro();
+        this.done_parsing();
+    }
+    public void syntax_error(int left,int right,String mensagem){
+		report_error(mensagem + " " + "Linha "+(left+1)+" Coluna "+(right),null);
+		JOptionPane.showMessageDialog(null,mensagem + " " + "Linha "+(left+1)+" Coluna "+(right+1),"Erro de syntax",JOptionPane.WARNING_MESSAGE);
+
+        util.setErro();
+        this.done_parsing();
+    }
+    public void report_fatal_error(String message, Object info){
+    	this.done_parsing();
+    }
+:}
+
+
+init with {:
+	 util = new Compilador();
+:};
+
+
+action code {::}
+
+terminal ALGORITMO;
+terminal VAR;
+terminal String TIPO_VARIAVEL,TIPO_VARIAVEL_VETOR;
+
+terminal INICIO;
+
+terminal String OPERADOR,OPERADOR_SOMA,VALOR_LOGICO;
+terminal ATRIBUIR;
+terminal ABRIR_PARENTESE, FECHAR_PARENTESE,ABRIR_COLCHETE,FECHAR_COLCHETE,DOIS_PONTOS;
+
+terminal SE,ENTAO,SENAO,FIMSE;
+terminal ENQUANTO,PARA,FACA,FIMENQUANTO,FIMPARA;
+terminal ESCOLHA,CASO,OUTROCASO,FIMESCOLHA;
+
+terminal INTERROMPA,ESPERAR,POTENCIA,MODULO,SENO,COSSENO,TANGENTE,RAIZ;
+terminal PI;
+
+terminal FUNCAO,FIMFUNCAO,VOID;
+terminal String CONDICIONAL_NUMERICA,CONDICIONAL_COMPARATIVA;
+
+terminal DE,E,ATE,PASSO,OU,NAO;
+
+terminal ESCREVA,ESCREVAL,LEIA;
+
+terminal FIMALGORITMO;
+
+terminal ADD_ATTR_VAR, SEPARADOR;
+terminal String ID,STRING,NUMERO_INT,NUMERO_FLOAT,CHAR;
+
+
+non terminal algoritmo;
+
+/* ALGORITMO DECLARACAO */
+non terminal algoritmo_nome, algoritmo_instanciacao;
+
+/* VAR DECLARACAO */
+non terminal var_estrutura, variaveis, var_instanciacao;
+non terminal String var_listagem;
+
+
+
+/* TERMINAL PROGRAMA */
+non terminal programa, corpo_programa;
+
+/* FUNCOES */
+non terminal 	instanciacao_variaveis,
+
+				condiciona_estrutura,
+				condicional_1,
+				condicional_2,
+
+				escreva_funcao,
+
+				leia_funcao,
+
+				enquanto_funcao,
+
+				para_funcao,
+				para_funcao_1,
+
+				escolha_funcao,
+				escolha_loop,
+				escolha_casos,
+				escolha_outrocaso,
+
+				funcoes_unitarias,
+
+				funcao_estruturacao,
+				funcao_parametros_loop,
+				funcao_parametros;
+
+/* PARA OPERACOES EM GERAL*/
+non terminal String _operacoes,_operacoes_indice_vetor;
+non terminal String _condicional,_sub_condicional;
+non terminal String _loop_virgula,_loop_virgula_id;
+non terminal String _para_complementar;
+
+
+/* PRESEDENCIA DE OPERACOES */
+precedence left OPERADOR,OPERADOR_SOMA;
+
+precedence left ABRIR_PARENTESE, FECHAR_PARENTESE;
+
+/* PRESEDENCIA DE VARIAVEIS */
+precedence left SEPARADOR;
+
+/* PRECEDENCIAS CONDICIONAIS */
+precedence left E,OU;
+precedence left CONDICIONAL_NUMERICA,CONDICIONAL_COMPARATIVA;
+
+
+start with algoritmo;
+
+
+
+/**********************************************************************************************************************************/
+/**********************************************************************************************************************************/
+/**********************************************************************************************************************************/
+
+
+
+/*************/
+/* ALGORITMO */
+/*************/
+algoritmo 		::= algoritmo_nome 
+					var_estrutura
+					INICIO
+					programa
+					FIMALGORITMO {: util.setEndClass(); util.codeComplete(); :} 
+					|;
+
+
+
+/****************************************/
+/* PARA A DECLARACAO DO NO DO ALGORITMO */
+/****************************************/
+algoritmo_nome   		::= algoritmo_instanciacao {: util.setInitClass(); :};
+algoritmo_instanciacao  ::= ALGORITMO ID:e {: 
+								util.setCode("public class "+e+" {"); 
+								util.setCodeName(e); 
+							:} | 
+							ALGORITMO STRING:e {: 
+								util.setCode("public class "+e.substring(1, e.length()-1)+" {"); 
+								util.setCodeName(e.substring(1, e.length()-1)); 
+							:};
+
+
+
+
+/**********************************/
+/* PARA A DECLARACAO DE VARIAVEIS */
+/**********************************/
+var_estrutura		::= VAR | VAR variaveis |;
+variaveis 			::= variaveis var_instanciacao | var_instanciacao;
+var_instanciacao 	::= var_listagem:e ADD_ATTR_VAR TIPO_VARIAVEL:x {:
+							util.addVariavel(e,x);
+							util.setCodeVariables("\t" + util.getTipoVariavel(x) + " " +e+ ";");
+							util.setCodeVariablesExec("\t" + util.getTipoVariavel(x) + " " +e+ ";");
+						:} |
+						var_listagem:e ADD_ATTR_VAR TIPO_VARIAVEL_VETOR ABRIR_COLCHETE NUMERO_INT:n1 DOIS_PONTOS NUMERO_INT:n2 FECHAR_COLCHETE DE TIPO_VARIAVEL:x {:
+							util.addVariavelVetor(e,x,n1,n2); 
+						:};
+
+var_listagem      	::= var_listagem:e1 SEPARADOR var_listagem:e2 {: RESULT = e1+","+e2; :} | 
+						ID:value  {: RESULT = value; :};
+
+
+
+
+/************/
+/* PROGRAMA */
+/************/
+programa 	::= programa corpo_programa | ;
+
+corpo_programa ::= funcoes_unitarias | instanciacao_variaveis | condiciona_estrutura | escreva_funcao | leia_funcao | enquanto_funcao | para_funcao | escolha_funcao;
+
+
+
+/**********************/
+/* CRIACAO DE FUNCOES */
+/**********************/
+/*
+funcao_estruturacao 	::= FUNCAO ID:id ABRIR_PARENTESE funcao_parametros_loop FECHAR_PARENTESE DOIS_PONTOS TIPO_VARIAVEL
+
+
+funcao_parametros_loop 	::= funcao_parametros_loop funcao_parametros | ;
+funcao_parametros 	::= ID:id DOIS_PONTOS TIPO_VARIAVEL:tipo;
+*/
+
+
+/**********************/
+/* FUNCOES UNITARIAS  */
+/**********************/
+funcoes_unitarias 	::= INTERROMPA:i {:
+							util.setCode("\t\tbreak;");
+							util.setCodeExec("\t\tbreak;",ileft);
+						:} |
+						ESPERAR:f ABRIR_PARENTESE _operacoes:n FECHAR_PARENTESE {:
+							String tmp_tipo_operacao = util.getTipoOperacao();
+							if(tmp_tipo_operacao != "int"){
+								parser.syntax_error(nleft,nright,util.Erros("SOMENTE_INT",null));
+							}else{
+								util.setCode("\t\tThread.sleep("+n+");");
+								util.setCodeExec("\t\tThread.sleep("+n+");",fleft);
+							}
+						:};
+
+
+
+
+/*********************************/
+/* PARA INSTANCIACAO DE VARIAVEIS*/
+/*********************************/
+instanciacao_variaveis   ::=  ID:x ATRIBUIR _operacoes:e {:
+							  		String tmp = util.setVariavelOperador(x,e);
+							  		switch(tmp){
+							  			case "error1" : parser.syntax_error(xleft,xright,util.Erros("VARIAVEL_ERRO1",x)); break;
+							  			case "error2" : parser.syntax_error(xleft,xright,util.Erros("VARIAVEL_ERRO2",x)); break;
+							  			default: 
+							  				util.setCode(tmp);
+							  				util.setCodeExec(tmp + "\ttable_variaveis.update(\""+x+"\","+x+");",xleft);
+							  			break;
+							  		}
+							  :} | 
+							  ID:x ABRIR_COLCHETE _operacoes_indice_vetor:n FECHAR_COLCHETE ATRIBUIR _operacoes:e {:
+							  		String tmp = util.setVariavelVetor(x,e,n);
+							  		switch(tmp){
+							  			case "error1" : parser.syntax_error(xleft,xright,util.Erros("VARIAVEL_VETOR_ERRO1",x)); break;
+							  			case "error2" : parser.syntax_error(xleft,xright,util.Erros("VARIAVEL_VETOR_ERRO2",x)); break;
+							  			case "error3" : parser.syntax_error(xleft,xright,util.Erros("VARIAVEL_VETOR_ERRO3",x)); break;
+							  			default: 
+							  				util.setCode(tmp);
+							  				util.setCodeExec(tmp,xleft);
+							  			break;
+							  		}
+							  :};
+
+
+
+/****************/
+/* CONDICIONAIS */
+/****************/
+condiciona_estrutura 	::= condicional_1 programa FIMSE:p {:
+								util.setCode("\t\t}");
+								util.setCodeExec("\t\t}",pleft);
+							:}| 
+							condicional_1 programa condicional_2 programa FIMSE:p3 {:
+								util.setCode("\t\t}");
+								util.setCodeExec("\t\t}",p3left);
+							:};
+
+
+condicional_1 	::= SE _condicional:c ENTAO {:
+						util.setCode("\t\tif("+c+"){");
+						util.setCodeExec("\t\tif("+c+"){",cleft);
+					:};
+
+
+condicional_2 	::= SENAO:p {:
+						util.setCode("\t\t}else{");
+						util.setCodeExec("\t\t}else{",pleft);
+					:};
+
+
+enquanto_funcao 	::= ENQUANTO _condicional:c FACA {:
+							util.setCode("\t\twhile("+c+"){");
+							util.setCodeExec("\t\twhile("+c+"){",cleft);
+						:} programa FIMENQUANTO:p {: util.setCode("\t\t}");util.setCodeExec("\t\t}",pleft);  :};
+
+
+
+
+
+/***************/
+/* FUNCAO PARA */
+/***************/
+para_funcao 	::= para_funcao_1;
+
+
+para_funcao_1 ::= PARA ID:n DE _operacoes:n1 {:
+						String tmp_tipo_operacao = util.getTipoOperacao();
+						if(tmp_tipo_operacao != "int"){
+							parser.syntax_error(n1left,n1right,util.Erros("TIPO_VARIAVEL_FOR",null));
+						}
+				:} ATE _operacoes:n2 {:
+						String tmp_tipo_operacao = util.getTipoOperacao();
+						if(tmp_tipo_operacao != "int"){
+							parser.syntax_error(n2left,n2right,util.Erros("TIPO_VARIAVEL_FOR",null));
+						}
+				:} _para_complementar:n3 FACA:p {:
+					String tmp[] = util.getVariavel(n);
+
+					if(tmp[1] != null) {
+						if("int".equals(tmp[1])){
+							if(n3 != null){
+								util.setCode("\t\tfor("+n+" = "+n1+";"+n+" <= "+n2+";"+n+"+="+n3+"){");
+								util.setCodeExec("\t\tfor("+n+" = "+n1+";"+n+" <= "+n2+";"+n+"+="+n3+"){",pleft);
+							}else{
+								util.setCode("\t\tfor("+n+" = "+n1+";"+n+" <= "+n2+";"+n+"++){");
+								util.setCodeExec("\t\tfor("+n+" = "+n1+";"+n+" <= "+n2+";"+n+"++){",pleft);
+							}
+							util.setCodeExec("\t\ttable_variaveis.update(\""+n+"\","+n+");");
+						}else{
+							parser.syntax_error(nleft,nright,util.Erros("TIPO_VARIAVEL_FOR",null));
+						}
+					}else{
+						parser.syntax_error(nleft,nright,util.Erros("VARIAVEL_ERRO1",n));
+					}
+				:} programa FIMPARA:f {: util.setCode("\t\t}");util.setCodeExec("\t\t}",fleft);  :};
+
+
+_para_complementar ::= PASSO _operacoes:n3 {:
+						String tmp_tipo_operacao = util.getTipoOperacao();
+						if(tmp_tipo_operacao != "int"){
+							parser.syntax_error(n3left,n3right,util.Erros("TIPO_VARIAVEL_FOR",null));
+						}else{
+							RESULT = n3;
+						}
+					:} |;
+
+
+
+
+
+/*****************************/
+/* FUNCAO ESCREVA E ESCREVAL */
+/*****************************/
+escreva_funcao 		::= ESCREVA ABRIR_PARENTESE _loop_virgula:e FECHAR_PARENTESE {: 
+							util.setCode("\t\tSystem.out.print("+e+");");
+							util.setCodeExec("\t\tConsoleIO.print("+e+");",eleft); 
+						:} |
+						ESCREVAL ABRIR_PARENTESE _loop_virgula:e FECHAR_PARENTESE {: 
+							util.setCode("\t\tSystem.out.println("+e+");");
+							util.setCodeExec("\t\tConsoleIO.println("+e+");",eleft); 
+						:};
+
+
+/***************/
+/* FUNCAO LEIA */
+/***************/
+leia_funcao 		::= LEIA ABRIR_PARENTESE _loop_virgula_id:e FECHAR_PARENTESE {:
+							util.setLeia(true);
+
+							for (String ids : e.split(",")) {
+								String[] tmp;
+
+								if(e.indexOf("[") > 0){
+									tmp = util.getVariavelVetor(ids.replaceAll("\\[.*\\]",""));
+									String indice = ids.substring(ids.indexOf("[")+1,ids.indexOf("]"));
+									ids = ids.substring(0,ids.indexOf("]"))+"-("+tmp[2]+")]";
+									switch(tmp[1]){
+										case "int" : util.setCode("\t\t"+ids+" = ConsoleIO.nextInt();");util.setCodeExec("\t\t"+ids+" = ConsoleIO.writeInt();",eleft);break;
+										case "float" : util.setCode("\t\t"+ids+" = scanIn.nextFloat();");util.setCodeExec("\t\t"+ids+" = ConsoleIO.writeFloat();",eleft);break;
+										case "String" : util.setCode("\t\t"+ids+" = scanIn.next();");util.setCodeExec("\t\t"+ids+" = ConsoleIO.writeString();",eleft);break;
+										case "char" : util.setCode("\t\t"+ids+" = scanIn.nextChar();");util.setCodeExec("\t\t"+ids+" = ConsoleIO.writeChar();",eleft);break;
+									}
+									util.setCodeExec("\t\ttable_variaveis.update(\""+tmp[0]+"[\"+"+indice+"+\"]\","+ids+");"); 
+								}else{
+									tmp = util.getVariavel(ids);
+									switch(tmp[1]){
+										case "int" : util.setCode("\t\t"+ids+" = ConsoleIO.nextInt();");util.setCodeExec("\t\t"+ids+" = ConsoleIO.writeInt();",eleft);break;
+										case "float" : util.setCode("\t\t"+ids+" = scanIn.nextFloat();");util.setCodeExec("\t\t"+ids+" = ConsoleIO.writeFloat();",eleft);break;
+										case "String" : util.setCode("\t\t"+ids+" = scanIn.next();");util.setCodeExec("\t\t"+ids+" = ConsoleIO.writeString();",eleft);break;
+										case "char" : util.setCode("\t\t"+ids+" = scanIn.nextChar();");util.setCodeExec("\t\t"+ids+" = ConsoleIO.writeChar();",eleft);break;
+									}
+									util.setCodeExec("\t\ttable_variaveis.update(\""+ids+"\","+ids+");");
+								}
+							}
+						:};
+
+
+
+/******************/
+/* FUNCAO ESCOLHA */
+/******************/
+escolha_funcao 	::= ESCOLHA _operacoes:a {: 
+						String tmp_tipo_operacao = util.getTipoOperacao(); 
+						util.setCode("\t\tswitch("+a+"){");
+						util.setCodeExec("\t\tswitch("+a+"){",aleft); 
+					:} escolha_loop escolha_outrocaso FIMESCOLHA:f {:
+						util.setCode("\t\t}");
+						util.setCodeExec("\t\t}",fleft); 
+					:};
+
+escolha_loop 	::= escolha_loop escolha_casos |;
+
+escolha_casos 	::= CASO _operacoes:b {: 
+						String tmp_tipo_operacao = util.getTipoOperacao(); 
+						util.setCode("\t\tcase("+b+"):");
+						util.setCodeExec("\t\tcase("+b+"):",bleft); 
+					:} programa;
+
+escolha_outrocaso 	::= OUTROCASO programa |;
+
+
+
+
+
+
+/************************************************************************************************************/
+/************************************************************************************************************/
+/************************************************************************************************************/
+
+
+/************************/
+/* CONDICINAL GRAMATICA */
+/************************/
+_condicional 	::= _condicional:c1 E _condicional:c2 {:
+						RESULT = c1+" && "+c2;
+						util.setCondicinalETMP(true);
+					:} |
+					_condicional:c1 OU _condicional:c2 {:
+						RESULT = c1+" || "+c2;
+						util.setCondicionalOuTMP(true);
+					:} |
+					ABRIR_PARENTESE _condicional:e FECHAR_PARENTESE	{: RESULT = "("+e+")"; :} |
+					NAO ABRIR_PARENTESE _condicional:e FECHAR_PARENTESE	{: RESULT = "!("+e+")"; :} |
+					_sub_condicional:e {: 
+						RESULT = e; 
+						String tmp = util.setCondicional(RESULT);
+						if(tmp != null){
+							switch(tmp){
+								case "error1" : parser.syntax_error(eleft,eright,util.Erros("CONDICIONAL_ERRO1",null)); break;
+								default: parser.syntax_error(eleft,eright,util.Erros("CONDICIONAL_ERRO2",tmp)); break;
+							}
+						}
+
+					:};
+
+_sub_condicional 	::= _sub_condicional:s1 CONDICIONAL_NUMERICA:c _sub_condicional:s2 {:
+							RESULT = s1+" "+c+" "+s2;
+							util.setCondicinalNumericaTMP(true);
+
+							String tmp = util.setSubCondicional(RESULT);
+							if(tmp != null){
+								switch(tmp){
+									case "error1" : parser.syntax_error(s1left,s1right,util.Erros("CONDICIONAL_ERRO1",null)); break;
+									default: parser.syntax_error(s1left,s1right,util.Erros("CONDICIONAL_ERRO2",tmp)); break;
+								}
+							}
+
+						:} |
+						_sub_condicional:s1 CONDICIONAL_COMPARATIVA:c _sub_condicional:s2 {:
+							
+							util.setCondicionalComparativaTMP(true);
+							
+							RESULT = s1+" "+util.getTipoCondiconal(c)+" "+s2;
+
+							String tmp = util.setSubCondicional(RESULT);
+							
+							if("String".equals(tmp)){
+								if("<>".equals(c)){
+									RESULT = "!"+s1+".equals("+s2+")";
+								}else{
+									RESULT = s1+".equals("+s2+")";
+								}
+							}
+							else if(tmp != null){
+								switch(tmp){
+									case "error1" : parser.syntax_error(s1left,s1right,util.Erros("CONDICIONAL_ERRO1",null)); break;
+									default: parser.syntax_error(s1left,s1right,util.Erros("CONDICIONAL_ERRO2",tmp)); break;
+								}
+							}
+
+						:} |
+						ABRIR_PARENTESE _sub_condicional:e FECHAR_PARENTESE	{: RESULT = "("+e+")"; :} |
+						NAO ABRIR_PARENTESE _sub_condicional:e FECHAR_PARENTESE	{: RESULT = "!("+e+")"; :} |
+						_operacoes:e {: 
+							RESULT = e;
+							util.setTiposOperacaoeTMP(util.getTipoOperacao());
+						:};
+
+
+
+/********************************************************************************************/
+/* LOOP COM VIRGULA PARA O ESCREVAL (PERMITIDO STRING IDS VETORES INTEIROS VALORES LOGICOS) */
+/********************************************************************************************/
+_loop_virgula 	::= _loop_virgula:e1 SEPARADOR _loop_virgula:e2 {: RESULT = e1 + " + " + e2; :} |
+					_operacoes:e {: 
+						RESULT = "("+e+")"; 
+						String tmp = util.getTipoOperacao(); 
+						if(tmp == null){
+							parser.syntax_error(eleft,eright,util.Erros("OPERACAO_ERRO1",null));
+						}
+					:};
+
+
+/********************************************************/
+/* LOOP COM VIRGULA PARA O LEIA (SOMENTE IDS E VETORES) */
+/********************************************************/
+_loop_virgula_id ::= _loop_virgula_id:e1 SEPARADOR _loop_virgula_id:e2 {: RESULT = e1 + "," + e2; :} |
+		          		ID:n {: 
+							if(util.checkVariavelExiste(n)) {
+								RESULT = n;
+							}else{
+								parser.syntax_error(nleft,nright,util.Erros("VARIAVEL_ERRO1",n));
+							}
+						:} |
+						ID:n ABRIR_COLCHETE _operacoes_indice_vetor:i FECHAR_COLCHETE {:
+							String[] tmp = util.getVariavelVetor(n);
+							if(tmp[0] != null){
+								RESULT = n+"["+i+"]";
+							}else{
+								parser.syntax_error(nleft,nright,util.Erros("VARIAVEL_VETOR_ERRO1",n));	
+							}
+						:};
+
+
+/*************/
+/* OPERACOES */
+/*************/
+_operacoes ::= _operacoes:e1 OPERADOR:op _operacoes:e2	{: 
+					RESULT = e1+" "+util.getOperador(op)+" "+e2; 
+					util.setOperadorTMP(true);
+				:} |
+
+				_operacoes:e1 OPERADOR_SOMA _operacoes:e2	{: 
+					RESULT = e1+" + "+e2; 
+					util.setOperadorSomaTMP(true);
+				:} |
+
+				POTENCIA ABRIR_PARENTESE _operacoes:n1 SEPARADOR _operacoes:n2 FECHAR_PARENTESE {:
+					RESULT = "Math.pow("+n1+","+n2+")";
+					util.setOperadorTMP(true);
+				:} |
+
+				MODULO ABRIR_PARENTESE _operacoes:n FECHAR_PARENTESE {:
+					RESULT = "Math.abs("+n+")";
+					util.setOperadorTMP(true);
+				:} |
+
+				SENO ABRIR_PARENTESE _operacoes:n FECHAR_PARENTESE {:
+					RESULT = "Math.sin("+n+"*"+(Math.PI)/180+")";
+					util.setOperadorTMP(true);
+				:} |
+
+				COSSENO ABRIR_PARENTESE _operacoes:n FECHAR_PARENTESE {:
+					RESULT = "Math.cos("+n+"*"+(Math.PI)/180+")";
+					util.setOperadorTMP(true);
+				:} |
+
+				TANGENTE ABRIR_PARENTESE _operacoes:n FECHAR_PARENTESE {:
+					RESULT = "Math.tan("+n+"*"+(Math.PI)/180+")";
+					util.setOperadorTMP(true);
+				:} |
+
+
+				RAIZ ABRIR_PARENTESE _operacoes:n FECHAR_PARENTESE {:
+					RESULT = "Math.sqrt("+n+")";
+					util.setOperadorTMP(true);
+				:} |
+
+          		ABRIR_PARENTESE _operacoes:e FECHAR_PARENTESE	{: RESULT = "("+e+")"; :} |
+
+				ID:n ABRIR_COLCHETE _operacoes_indice_vetor:i FECHAR_COLCHETE {:
+					String[] tmp = util.getVariavelVetor(n);
+					if(tmp[0] != null){
+						util.setTipoIdTMP(tmp[1]);
+						RESULT = n+"["+i+" - ("+tmp[2]+")]";
+					}else{
+						parser.syntax_error(nleft,nright,util.Erros("VARIAVEL_VETOR_ERRO1",n));	
+					}
+				:} |
+          		NUMERO_INT:n {: 
+					RESULT = n;
+					util.setNumeroIntTMP(true); 
+				:} |
+          		NUMERO_FLOAT:n {: 
+					RESULT = n;
+					util.setNumerofloatTMP(true); 
+				:} |
+				PI {:
+					RESULT = ""+Math.PI;
+					util.setNumerofloatTMP(true); 
+				:} |
+          		ID:n {: 
+					if(util.checkVariavelExiste(n)) {
+						String[] tmp = util.getVariavel(n);
+						util.setTipoIdTMP(tmp[1]);
+						RESULT = n;
+					}else{
+						parser.syntax_error(nleft,nright,util.Erros("VARIAVEL_ERRO1",n));	
+					}
+				:} |
+				STRING:s {: 
+					util.setStringTMP(true);
+					RESULT = s;
+				:} |
+				CHAR:s {:
+					util.setCharTMP(true);
+					RESULT = s;
+				:} |
+				VALOR_LOGICO:l {:
+					util.setBooleanTMP(true);
+					RESULT = util.getValorLogico(l);
+				:};
+
+
+/********************************/
+/* OPERAÇÕES DE INCICE VETORIAL */
+/********************************/
+_operacoes_indice_vetor ::= _operacoes_indice_vetor:e1 OPERADOR:op _operacoes_indice_vetor:e2	{: RESULT = e1+" "+util.getOperador(op)+" "+e2;  :} |
+							_operacoes_indice_vetor:e1 OPERADOR_SOMA _operacoes_indice_vetor:e2	{: RESULT = e1+" + "+e2; :} |
+							ABRIR_PARENTESE _operacoes_indice_vetor:e FECHAR_PARENTESE {: RESULT = e; :} |
+							NUMERO_INT:n {: RESULT = n; :} |
+			          		ID:n {:
+			          			String[] tmp = util.getVariavel(n);
+								if(tmp[1] != null) {
+									if("int".equals(tmp[1])){
+										RESULT = n;
+									}else{
+										parser.syntax_error(nleft,nright,util.Erros("VARIAVEL_ERRO1",n));
+									}
+								}else{
+									parser.syntax_error(nleft,nright,util.Erros("VARIAVEL_VETOR_ERRO4",n));	
+								}
+							:};

@@ -1,0 +1,75 @@
+////////////////////////////////////////////////////////////////////////
+/*                                                                  ////
+* DECLARACAO DE EXPRESSOES EM PORTUGOL (ANALIZADOR E COMPILADOR).   ////
+* BY: ANDREW NETO                                                   ////
+* 20/06/2014                                                        ////
+*/                                                                  ////
+////////////////////////////////////////////////////////////////////////
+
+package com.analizador.exp_condicional;
+
+import java_cup.runtime.*;
+
+parser code
+{:
+    public static void main(String args[]) throws Exception{
+        new parser(new Yylex(System.in)).parse();
+    }
+    public void syntax_error(Symbol s){
+        report_error("Erro de syntax: Linha "+(s.left+1)+" Coluna "+(s.right)+". Trecho desconhecido: \""+s.value+"\"",null);
+    }
+:}
+
+
+terminal            SE,ENTAO;
+terminal			CONDICIONAL,CONDICIONAL_ESPECIAL,CONDICIONAL_ADITIVA;
+terminal            OPERADOR;
+terminal            ABRIR_PARENTESE, FECHAR_PARENTESE;
+terminal String     NUMERO,ID,STRING;
+
+
+/*
+*	PARA OPERACOES DENTRO DA CONDICIONAL.: EX-> (a+b > a+c)
+*/
+non terminal            gramatica,instanciacao_global;
+non terminal String     instanciacao_ligativa,instanciacao_fragmental,instanciacao_operativa;
+
+non terminal String     instanciacao_ligativa_string,instanciacao_string;
+
+
+
+precedence left CONDICIONAL_ADITIVA,CONDICIONAL_ESPECIAL,CONDICIONAL;
+precedence left ABRIR_PARENTESE,FECHAR_PARENTESE;
+precedence left OPERADOR;
+
+
+gramatica   ::= gramatica instanciacao_global | instanciacao_global | error {::};
+
+
+
+instanciacao_global     ::= SE instanciacao_ligativa:x ENTAO {: System.out.println("if(" + x + ")"); :};
+
+
+/*
+*       PARA IDS,NUMEROS (RELIZAM OPERACOES)
+*/
+instanciacao_ligativa   ::= instanciacao_ligativa:x1 CONDICIONAL_ADITIVA:y instanciacao_ligativa:x2 {: RESULT = x1 + " " + y + " " + x2; :} |
+                            ABRIR_PARENTESE instanciacao_ligativa:x FECHAR_PARENTESE {: RESULT = "("+x+")"; :} |
+                            instanciacao_fragmental:z {: RESULT = z; System.out.println("instanciacao_fragmental:z = "+z); :};
+
+instanciacao_fragmental     ::= instanciacao_fragmental:x1 CONDICIONAL:y instanciacao_fragmental:x2 {: RESULT = x1 + " " + y + " " + x2; :} |
+                                instanciacao_fragmental:x1 CONDICIONAL_ESPECIAL:y instanciacao_fragmental:x2 {: RESULT = x1 + " " + y + " " + x2; :} |
+                                instanciacao_operativa:e {: RESULT = e;System.out.println("instanciacao_operativa:e = "+e);  :};
+
+
+instanciacao_operativa  ::= instanciacao_operativa:e1 OPERADOR:op instanciacao_operativa:e2 {: RESULT = e1+" "+op+" "+e2; :} | 
+                            ABRIR_PARENTESE instanciacao_operativa:e FECHAR_PARENTESE {: RESULT = "("+e+")"; :} | 
+                            NUMERO:n {: RESULT = n; System.out.println("NUMERO:n = "+n); :} |
+                            ID:n {: RESULT = n; System.out.println("ID:n = "+n); :};
+
+/*
+*       PARA STRINGS (CASO ESPECIFICO (SOMENTE =  E <> ))
+*/
+instanciacao_string     ::= instanciacao_string:x1 CONDICIONAL_ESPECIAL:x instanciacao_string:x2 {: RESULT = x1+" "+x+" "+x2; :} |
+                            ABRIR_PARENTESE instanciacao_string:e FECHAR_PARENTESE {: RESULT = "("+e+")"; :} | 
+                            STRING:n {: RESULT = "\""+n+"\""; :};

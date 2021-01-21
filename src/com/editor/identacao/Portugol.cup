@@ -1,0 +1,34 @@
+////////////////////////////////////////////////////////////////////////
+/*                                                                  ////
+* ANALIZADOR DE PORTUGOL (IDENTACAO).							    ////
+* BY: ANDREW NETO                                                   ////
+* 29/09/2014                                                        ////
+*/                                                                  ////
+////////////////////////////////////////////////////////////////////////
+
+package com.compilador.portugol;
+
+import java_cup.runtime.*;
+
+
+terminal VAR;
+
+terminal INICIO,FIMALGORITMO;
+
+
+terminal SE,SENAO,FIMSE;
+terminal ENQUANTO,FIMENQUANTO,PARA,FIMPARA;
+terminal ESCOLHA,CASO,OUTROCASO,FIMESCOLHA;
+
+terminal ALL;
+
+
+
+
+non terminal identacao;
+
+
+start with identacao;
+
+
+identacao 	::= VAR

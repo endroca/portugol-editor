@@ -1,0 +1,239 @@
+////////////////////////////////////////////////////////////////////////
+/*                                                                  ////
+* ANALIZADOR DE PORTUGOL (GRAMATICA).							    ////
+* BY: ANDREW NETO                                                   ////
+* 05/07/2014                                                        ////
+*/                                                                  ////
+////////////////////////////////////////////////////////////////////////
+
+package com.analizador.portugol;
+
+/*import static com.analizador.portugol.parser.error;*/
+import java_cup.runtime.*;
+
+
+parser code
+{:
+
+	static Compilador util = new Compilador();
+
+    public static void main(String args[]) throws Exception{
+        new parser(new PortugolFlex(System.in)).parse();
+    }
+    public void syntax_error(Symbol s){
+        report_error("Erro de syntax: Linha "+(s.left+1)+" Coluna "+(s.right)+". Trecho desconhecido: "+s.value,null);
+        util.setErro();
+    }
+:}
+
+action code {::}
+
+terminal ALGORITMO;
+terminal VAR;
+terminal String TIPO_VARIAVEL,TIPO_VARIAVEL_VETOR;
+
+terminal INICIO;
+
+terminal String OPERADOR,OPERADOR_SOMA,VALOR_LOGICO;
+terminal ATRIBUIR;
+terminal ABRIR_PARENTESE, FECHAR_PARENTESE,ABRIR_COLCHETE,FECHAR_COLCHETE,DOIS_PONTOS;
+
+terminal SE,ENTAO,SENAO,FIMSE;
+terminal String CONDICIONAL_NUMERICA,CONDICIONAL_COMPARATIVA;
+
+terminal DE,E,OU;
+
+terminal FIMALGORITMO;
+
+terminal ADD_ATTR_VAR, SEPARADOR;
+terminal String ID,STRING,NUMERO_INT,NUMERO_FLOAT;
+
+
+non terminal algoritmo;
+
+/* ALGORITMO DECLARACAO */
+non terminal algoritmo_nome, algoritmo_instanciacao;
+
+/* VAR DECLARACAO */
+non terminal var_estrutura, variaveis, var_instanciacao;
+non terminal String var_listagem;
+
+
+
+/* TERMINAL PROGRAMA */
+non terminal programa, corpo_programa;
+
+/* FUNCOES */
+non terminal instanciacao_variaveis,condicional;
+
+/* PARA OPERACOES EM GERAL*/
+non terminal String _operacoes,_condicional,_sub_condicional;
+
+
+/* PRESEDENCIA DE OPERACOES */
+precedence left OPERADOR,OPERADOR_SOMA;
+
+precedence left ABRIR_PARENTESE, FECHAR_PARENTESE;
+
+/* PRESEDENCIA DE VARIAVEIS */
+precedence left SEPARADOR;
+
+/* PRECEDENCIAS CONDICIONAIS */
+precedence left E,OU;
+precedence left CONDICIONAL_NUMERICA,CONDICIONAL_COMPARATIVA;
+
+start with algoritmo;
+
+/* ALGORITMO */
+algoritmo 		::= algoritmo_nome 
+					var_estrutura 
+					INICIO {: util.setCode("\n\tpublic static void main(String[] args) {"); :}
+					programa
+					FIMALGORITMO {: util.setCode("\t}\n}"); if(util.isErros() == false) util.printCode(); :}
+					| error {::};
+
+
+
+
+/* PARA A DECLARACAO DO NO DO ALGORITMO */
+algoritmo_nome   		::= algoritmo_instanciacao | error {:  :};
+algoritmo_instanciacao  ::= ALGORITMO ID:e {: util.setCode("class "+e+" {"); :} | ALGORITMO STRING:e {: util.setCode("class "+e.toString().substring(1, e.toString().length()-1)+" {"); :};
+
+
+
+
+
+/* PARA A DECLARACAO DE VARIAVEIS */
+var_estrutura		::= VAR variaveis | error {: util.setCode("Detalhe: Erro de estruturacao. Exemplo de estruturacao.: var variavel1,variavel2 : tipo_de_variavel"); :};
+variaveis 			::= variaveis var_instanciacao | var_instanciacao | error {: :};
+var_instanciacao 	::= var_listagem:e ADD_ATTR_VAR TIPO_VARIAVEL:x {:
+							util.addVariavel(e,x); /* Ja estao com toLowerCase */
+							util.setCode("\t" + util.getTipoVariavel(x) + " " +e+ ";");
+						:} |
+						var_listagem:e ADD_ATTR_VAR TIPO_VARIAVEL_VETOR ABRIR_COLCHETE NUMERO_INT:n1 DOIS_PONTOS NUMERO_INT:n2 FECHAR_COLCHETE DE TIPO_VARIAVEL:x {:
+							util.setBiblioteca("import java.util.List;");
+							util.addVariavelVetor(e,x,n1,n2); /* Ja estao com toLowerCase */
+							util.setCode("\tList<"+util.getTipoVariavel(x)+"> "+e+" = new ArrayList<>();");
+						:};
+
+var_listagem      	::= var_listagem:e1 SEPARADOR var_listagem:e2 {: RESULT = e1+","+e2; :} | 
+						ID:value  {: RESULT = value.toLowerCase(); :};
+
+
+
+
+
+/*PROGRAMA*/
+programa 	::= programa corpo_programa | corpo_programa | error {::};
+
+corpo_programa ::= instanciacao_variaveis | condicional;
+
+
+instanciacao_variaveis   ::=  ID:x ATRIBUIR _operacoes:e {:
+							  		String tmp = util.setVariavelOperador(x.toLowerCase(),e);
+							  		switch(tmp){
+							  			case "error1" : this.parser.report_error("Erro de syntax: Variavel \""+x+"\" não foi declarada", null);util.setErro(); break;
+							  			case "error2" : this.parser.report_error("Erro de syntax: Variavel \""+x+"\" não suporta esse tipo de valor", null);util.setErro(); break;
+							  			default: util.setCode(tmp); break;
+							  		}
+							  :} | 
+							  ID:x ABRIR_COLCHETE NUMERO_INT:n FECHAR_COLCHETE ATRIBUIR _operacoes:e {:
+							  		String tmp = util.setVariavelVetor(x.toLowerCase(),e,n);
+							  		switch(tmp){
+							  			case "error1" : this.parser.report_error("Erro de syntax: Variavel \""+x+"\" não foi declarada", null);util.setErro(); break;
+							  			case "error2" : this.parser.report_error("Erro de syntax: Variavel \""+x+"\" não suporta esse tipo de valor", null);util.setErro(); break;
+							  			case "error3" : this.parser.report_error("Erro de syntax: Indice do vetor \""+x+"\" esta incorreto", null);util.setErro(); break;
+							  			default: util.setCode(tmp); break;
+							  		}
+							  :} ;
+
+
+condicional 	::= SE _condicional:c ENTAO {:
+						String tmp = util.setCondicional(c.toLowerCase());
+						switch(tmp){
+							case "error1" : this.parser.report_error("Erro de syntax: Comparacao indevida em "+c, null);util.setErro(); break;
+							default: util.setCode(tmp); break;
+						}
+					:} programa FIMSE;
+
+
+
+/* CONDICINAL GRAMATICA */
+_condicional 	::= _condicional:c1 E _condicional:c2 {:
+						RESULT = c1+" && "+c2;
+						util.setCondicinalETMP(true);
+					:} |
+					_condicional:c1 OU _condicional:c2 {:
+						RESULT = c1+" || "+c2;
+						util.setCondicionalOuTMP(true);
+					:} |
+					ABRIR_PARENTESE _condicional:e FECHAR_PARENTESE	{: RESULT = "("+e+")"; :} |
+					_sub_condicional:e {: RESULT = e; :};
+
+
+_sub_condicional 	::= _sub_condicional:s1 CONDICIONAL_NUMERICA:c _sub_condicional:s2 {:
+							RESULT = s1+" "+c+" "+s2;
+							util.setCondicinalNumericaTMP(true);
+						:} |
+						_sub_condicional:s1 CONDICIONAL_COMPARATIVA:c _sub_condicional:s2 {:
+							RESULT = s1+" "+util.getTipoCondiconal(c)+" "+s2;
+							util.setCondicionalComparativaTMP(true);
+						:} |
+						ABRIR_PARENTESE _sub_condicional:e FECHAR_PARENTESE	{: RESULT = "("+e+")"; :} |
+						_operacoes:e {: 
+							RESULT = e;
+							util.setTiposOperacaoeTMP(util.getTipoOperacao());
+						:};
+
+
+/* OPERACOES */
+_operacoes ::= _operacoes:e1 OPERADOR:op _operacoes:e2	{: 
+					RESULT = e1+" "+util.getOperador(op)+" "+e2; 
+					util.setOperadorTMP(true);
+				:} |
+				_operacoes:e1 OPERADOR_SOMA _operacoes:e2	{: 
+					RESULT = e1+" + "+e2; 
+					util.setOperadorSomaTMP(true);
+				:} |
+          		ABRIR_PARENTESE _operacoes:e FECHAR_PARENTESE	{: RESULT = "("+e+")"; :} |
+          		NUMERO_INT:n {: 
+					RESULT = n;
+					util.setNumeroIntTMP(true); 
+				:} |
+          		NUMERO_FLOAT:n {: 
+					RESULT = util.getValorRealFloat(n);
+					util.setNumeroFloatTMP(true); 
+				:} |
+          		ID:n {: 
+					if(util.checkVariavelExiste(n.toLowerCase())) {
+						String[] tmp = util.getVariavel(n.toLowerCase());
+						util.setTipoIdTMP(tmp[1]);
+						RESULT = n.toLowerCase();
+					}else{
+						this.parser.report_error("Erro de syntax: Variavel \""+n+"\" não foi declarada", null);
+						util.setErro();
+					}
+				:} |
+				ID:n ABRIR_COLCHETE NUMERO_INT:i FECHAR_COLCHETE ATRIBUIR {:
+					String[] tmp = util.getVariavelVetor(n.toLowerCase());
+					if(tmp[0] != null){
+						if (i >= tmp[2] && i <= tmp[3]) {
+							util.setTipoIdTMP(tmp[1]);
+							RESULT = n.toLowerCase()+".get("+i+")";
+						}else{
+							this.parser.report_error("Erro de syntax: Indice do vetor \""+n+"\" esta incorreto", null);
+							util.setErro();		
+						}
+					}else{
+						this.parser.report_error("Erro de syntax: Variavel \""+n+"\" não foi declarada", null);
+						util.setErro();	
+					}
+				:} |
+				STRING:s {: 
+					util.setStringTMP(true);
+					RESULT = s;
+				:} |
+				VALOR_LOGICO:l {:
+					util.setBooleanTMP(true);
+					RESULT = util.getValorLogico(l);
+				:};

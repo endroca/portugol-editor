@@ -1,0 +1,4 @@
+var
+	Nome,sobrenome 	: caracter
+	idade		: inteiro
+	massa		: real

@@ -1,0 +1,23 @@
+package com.analizador.algoritmoName;
+
+import java_cup.runtime.*;
+
+parser code
+{:
+    public static void main(String args[]) throws Exception{
+        new parser(new Yylex(System.in)).parse();
+    }
+    public void syntax_error(Symbol s){
+        report_error("Erro de syntax: Linha "+(s.left+1)+" Coluna "+(s.right)+". Trecho desconhecido: \""+s.value+"\"",null);
+    }
+:}
+
+terminal ALGORITMO,ID,STRING;
+
+non terminal algoritmo,instanciacao;
+
+
+
+algoritmo   ::= algoritmo instanciacao | instanciacao | error {:  :};
+
+instanciacao  ::= ALGORITMO ID:e {: System.out.println("String ALGORITMO = \""+e+"\";"); :} | ALGORITMO STRING:e {: System.out.println("String ALGORITMO = \""+e+"\";"); :};

@@ -1,0 +1,46 @@
+////////////////////////////////////////////////////////////////////////
+/*                                                                  ////
+* DECLARACAO DE EXPRESSOES EM PORTUGOL (ANALIZADOR E COMPILADOR).   ////
+* BY: ANDREW NETO                                                   ////
+* 20/06/2014                                                        ////
+*/                                                                  ////
+////////////////////////////////////////////////////////////////////////
+
+package com.analizador.expressao;
+
+import java_cup.runtime.*;
+
+parser code
+{:
+    public static void main(String args[]) throws Exception{
+        new parser(new Yylex(System.in)).parse();
+    }
+    public void syntax_error(Symbol s){
+        report_error("Erro de syntax: Linha "+(s.left+1)+" Coluna "+(s.right)+". Trecho desconhecido: \""+s.value+"\"",null);
+    }
+:}
+
+
+terminal			ATRIBUIR;
+terminal            OPERADOR;
+terminal            ABRIR_PARENTESE, FECHAR_PARENTESE;
+terminal String     NUMERO,ID,STRING;
+
+
+non terminal            gramatica, instanciacao;
+non terminal String     valor;
+
+
+precedence left OPERADOR;
+
+gramatica       ::= gramatica instanciacao 	  | 
+                    instanciacao       			  | 
+                    error {::}                ;
+
+instanciacao    ::=  ID:x ATRIBUIR valor:e {: System.out.println(x+" = "+e); :} | ID:x ATRIBUIR STRING:e {: System.out.println(x+" = \""+e+"\""); :};
+
+
+valor           ::= valor:e1 OPERADOR:op valor:e2                     {: RESULT = (String) e1+" "+op+" "+e2; :}   | 
+                    ABRIR_PARENTESE valor:e FECHAR_PARENTESE          {: RESULT = "("+e+")"; :}                   | 
+                    NUMERO:n                                          {: RESULT = n; :}                           |
+                    ID:n                                              {: RESULT = n; :}                           ;

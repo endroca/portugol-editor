@@ -1,0 +1,41 @@
+////////////////////////////////////////////////////////////////////////
+/*																	////
+*	DECLARACAO DE VARIAVEIS EM PORTUGOL (ANALIZADOR E COMPILADOR).	////
+*	BY: ANDREW NETO													////
+*	19/06/2014														////
+*/																	////
+////////////////////////////////////////////////////////////////////////
+package com.analizador.var;
+
+import java_cup.runtime.*;
+
+parser code
+{:
+    public static void main(String args[]) throws Exception{
+        new parser(new Yylex(System.in)).parse();
+    }
+    public void syntax_error(Symbol s){
+        report_error("Erro de syntax: Linha "+(s.left+1)+" Coluna "+(s.right)+". Trecho desconhecido: \""+s.value+"\"",null);
+    }
+:}
+
+terminal           VAR;
+terminal		   ID;
+terminal           TIPO_VARIAVEL, ADD_ATTR_VAR, SEPARADOR;
+
+
+non terminal            estrutura,variaveis, instanciacao;
+non terminal String    	listagem;
+
+
+/* ELIMINAR CONFLIO */
+precedence left SEPARADOR;
+
+
+estrutura		::= VAR variaveis | error {: System.out.println("Detalhe: Erro de estruturacao. Exemplo de estruturacao.: var variavel1,variavel2 : tipo_de_variavel"); :};
+
+variaveis 		::= variaveis instanciacao | instanciacao | error {: :};
+
+instanciacao 	::= listagem:e ADD_ATTR_VAR TIPO_VARIAVEL:x {: System.out.println(x+" "+ e +";"); :} ;
+
+listagem      	::= listagem:e1 SEPARADOR listagem:e2 {: RESULT = (String) e1+","+e2; :} | ID:value /* PARA ATRIBUIR O VALOR DO ID EM LISTAGEM */ {: RESULT = (String) value; :};
